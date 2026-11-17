@@ -210,7 +210,7 @@ services:
   rest:
     image: postgrest/postgrest:v14.18
     <<: *restart
-    mem_limit: ${REST_MEM_LIMIT:-128m}
+    mem_limit: ${REST_MEM_LIMIT:-256m}
     depends_on:
       db:
         condition: service_healthy
@@ -222,6 +222,8 @@ services:
     environment:
       PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
+      # Caps rows per response. PostgREST buffers whole responses in memory:
+      # raising this needs a higher REST_MEM_LIMIT (see README, RAM footprint).
       PGRST_DB_MAX_ROWS: ${PGRST_DB_MAX_ROWS:-1000}
       PGRST_DB_EXTRA_SEARCH_PATH: ${PGRST_DB_EXTRA_SEARCH_PATH:-public}
       PGRST_DB_ANON_ROLE: anon
@@ -303,6 +305,9 @@ services:
       IMGPROXY_MAX_SRC_RESOLUTION: 16.8
       # Keep libvips memory in check on small hosts.
       IMGPROXY_WORKERS: ${IMGPROXY_WORKERS:-2}
+      # INFO logs every request path, which includes the presigned MinIO URL
+      # (a short-lived but replayable credential).
+      IMGPROXY_LOG_LEVEL: ${IMGPROXY_LOG_LEVEL:-warn}
 
   # ---------------------------------------------------------------------------
   # Dashboard: postgres-meta + Studio (served through the API gateway at /)
