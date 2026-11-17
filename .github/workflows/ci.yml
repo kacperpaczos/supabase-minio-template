@@ -55,7 +55,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Generate .env
-        run: ./scripts/gen-env.sh COMPOSE_PROJECT_NAME=sbm-ci
+        # 50k-row responses (~14 MiB) let the smoke test stress PostgREST
+        # memory at the default REST_MEM_LIMIT.
+        run: ./scripts/gen-env.sh COMPOSE_PROJECT_NAME=sbm-ci PGRST_DB_MAX_ROWS=50000
 
       - name: Pull images
         run: docker compose pull --quiet
