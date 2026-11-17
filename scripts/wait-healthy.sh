@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Wait until every started service is healthy (or, for one-shot services,
-# exited with code 0). Usage: scripts/wait-healthy.sh [timeout-seconds]
+# exited with code 0). Restarting containers count as pending until the
+# timeout. Usage: scripts/wait-healthy.sh [timeout-seconds]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -20,7 +21,7 @@ while :; do
           healthy|"-") ;;
           *) pending="$pending $svc($health)" ;;
         esac ;;
-      restarting|dead) broken="$broken $svc($state)" ;;
+      dead) broken="$broken $svc($state)" ;;
       *) pending="$pending $svc($state)" ;;
     esac
   done < <(docker compose ps -a --format '{{.Service}} {{.State}} {{if .Health}}{{.Health}}{{else}}-{{end}} {{.ExitCode}}')
@@ -36,6 +37,10 @@ while :; do
   if [ "$(date +%s)" -ge "$deadline" ]; then
     echo "wait: timed out after ${timeout}s, still waiting for:$pending" >&2
     docker compose ps -a >&2
+    for svc in $pending; do
+      echo "--- last log lines of ${svc%%(*}" >&2
+      docker compose logs --no-color --tail=40 "${svc%%(*}" >&2 || true
+    done
     exit 1
   fi
   sleep 5
