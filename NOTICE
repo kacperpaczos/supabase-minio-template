@@ -1,0 +1,23 @@
+supabase-minio-template
+=======================
+
+This project is licensed under the MIT License (see LICENSE), except for the
+third-party files listed below.
+
+Files derived from the Supabase self-hosting setup
+(https://github.com/supabase/supabase/tree/master/docker), Copyright Supabase,
+licensed under the Apache License, Version 2.0
+(https://www.apache.org/licenses/LICENSE-2.0):
+
+  - volumes/api/envoy/*            (unmodified)
+  - volumes/db/*.sql               (unmodified)
+  - volumes/functions/**           (unmodified)
+  - volumes/pooler/pooler.exs      (unmodified)
+  - volumes/logs/vector.yml        (modified: logs are selected by compose
+                                    project label and routed by service name)
+  - docker-compose.yml             (derived from docker-compose.yml,
+                                    docker-compose.s3.yml and
+                                    docker-compose.logs.yml)
+
+"Supabase" is a trademark of Supabase, Inc. This project is not affiliated
+with or endorsed by Supabase or MinIO.
