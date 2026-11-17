@@ -11,7 +11,7 @@ licensed under the Apache License, Version 2.0
 
   - volumes/api/envoy/*            (unmodified)
   - volumes/db/*.sql               (unmodified)
-  - volumes/functions/**           (unmodified)
+  - volumes/functions/main, hello, deno.jsonc (unmodified)
   - volumes/pooler/pooler.exs      (unmodified)
   - volumes/logs/vector.yml        (modified: logs are selected by compose
                                     project label and routed by service name)
