@@ -385,6 +385,10 @@ services:
     profiles: ["realtime"]
     <<: *restart
     mem_limit: ${REALTIME_MEM_LIMIT:-512m}
+    ulimits:
+      nofile:
+        soft: 10000
+        hard: 10000
     networks:
       default:
         # Realtime derives the tenant id from the host name; the gateway
@@ -522,6 +526,12 @@ services:
     profiles: ["pooler"]
     <<: *restart
     mem_limit: ${SUPAVISOR_MEM_LIMIT:-512m}
+    # The entrypoint raises RLIMIT_NOFILE to 100000; hosts with a lower
+    # default hard limit (e.g. CI runners) need it granted explicitly.
+    ulimits:
+      nofile:
+        soft: 100000
+        hard: 100000
     ports:
       - 127.0.0.1:${POOLER_SESSION_HOST_PORT:-58433}:5432
       - 127.0.0.1:${POOLER_TRANSACTION_HOST_PORT:-58543}:6543
