@@ -126,9 +126,13 @@ COMPOSE_PROFILES=realtime,functions
 | Profile | Services | Memory limit |
 | --- | --- | --- |
 | `realtime` | Realtime | 512 MiB |
-| `functions` | Edge Functions (code in `volumes/functions/`) | 512 MiB |
+| `functions` | Edge Functions (code in `volumes/functions/`; try `/functions/v1/ping`) | 512 MiB |
 | `analytics` | Logflare + Vector; also set `STUDIO_LOGS_ENABLED=true` | 1 GiB + 256 MiB |
 | `pooler` | Supavisor | 512 MiB |
+
+The upstream `hello` example function uses `@supabase/server`, which only
+accepts the newer `sb_publishable_`/`sb_secret_` keys (not generated here, see
+below); `ping` works with the generated keys.
 
 To turn a profile off again, run `make down` *before* removing it from
 `COMPOSE_PROFILES`, or stop the container by hand.
@@ -333,7 +337,7 @@ scripts/
 volumes/
   api/envoy/              gateway config (from upstream)
   db/                     database init scripts (from upstream)
-  functions/              Edge Functions (from upstream examples)
+  functions/              Edge Functions (upstream examples + `ping`)
   logs/vector.yml         log routing for the analytics profile
   minio/init.sh           bucket, scoped user and policy bootstrap
   pooler/pooler.exs       Supavisor tenant bootstrap
