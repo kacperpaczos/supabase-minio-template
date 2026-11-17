@@ -257,6 +257,10 @@ Studio and postgres-meta account for about 300 MiB; if you do not need the
 dashboard on a server, `docker compose stop studio meta` (the gateway keeps
 serving the APIs, only `/` stops working; measured total without them: ~490 MiB).
 
+With all four profiles enabled the CI run measures about 1.7 GiB in total
+(Logflare ~520 MiB, Realtime ~190 MiB, Supavisor ~180 MiB, Edge Functions
+~40 MiB idle, Vector ~30 MiB).
+
 Memory limits (`mem_limit`) are set per container and can be changed through
 the `*_MEM_LIMIT` keys in `.env`. Postgres and MinIO grow with data and load;
 give them more on a real server.
