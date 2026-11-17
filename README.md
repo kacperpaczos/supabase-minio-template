@@ -184,8 +184,14 @@ if you need them.
 6. Anon can neither upload to nor read from the private bucket
 7. imgproxy returns a 16x12 thumbnail of a 64x48 PNG through
    `/storage/v1/render/image/...`
+8. PostgREST survives 9 large reads (50k-row table, capped by
+   `PGRST_DB_MAX_ROWS`) without a restart or OOM kill
+9. Signed URLs (download and render) work without API keys, and afterwards no
+   signed-URL token, API key, secret or presigned MinIO URL appears anywhere
+   in `docker compose logs` (a request with `?apikey=` and a Referer carrying
+   the token are included on purpose)
 
-It creates a temporary table and bucket and removes them afterwards.
+It creates temporary tables and a bucket and removes them afterwards.
 
 ## Backups
 
@@ -249,9 +255,9 @@ default profile (no optional services):
 | db | 75 MiB | 1 GiB |
 | api-gw (Envoy) | 26 MiB | 128 MiB |
 | imgproxy | 16 MiB | 256 MiB |
-| rest | 14 MiB | 128 MiB |
+| rest | 14 MiB | 256 MiB |
 | auth | 10 MiB | 128 MiB |
-| **total** | **~790 MiB** | 3.4 GiB |
+| **total** | **~790 MiB** | 3.5 GiB |
 
 Studio and postgres-meta account for about 300 MiB; if you do not need the
 dashboard on a server, `docker compose stop studio meta` (the gateway keeps
@@ -260,6 +266,24 @@ serving the APIs, only `/` stops working; measured total without them: ~490 MiB)
 With all four profiles enabled the CI run measures about 1.7 GiB in total
 (Logflare ~520 MiB, Realtime ~190 MiB, Supavisor ~180 MiB, Edge Functions
 ~40 MiB idle, Vector ~30 MiB).
+
+**PostgREST and large responses.** PostgREST builds each response in memory,
+so its peak grows with rows per response times concurrent requests. Measured
+peaks on a 50k-row table (~14 MiB of JSON per response):
+
+| `PGRST_DB_MAX_ROWS` | Workload | REST peak |
+| --- | --- | ---: |
+| 1000 (default) | 3 x 32 parallel full reads | 31 MiB |
+| 50000 | 5 sequential reads | 81 MiB |
+| 50000 | 5 sequential + 4 parallel | ~150 MiB |
+| 50000 | 8 parallel | 256 MiB (at the limit) |
+| 50000 | 8 parallel, 128 MiB limit | **OOM-killed** |
+
+Hence the defaults: `PGRST_DB_MAX_ROWS=1000` and `REST_MEM_LIMIT=256m`. If you
+raise the row cap, raise `REST_MEM_LIMIT` too (roughly 5x the largest response
+times expected concurrency) or paginate with `limit`/`offset` or `Range`
+headers. The smoke test (in CI with `PGRST_DB_MAX_ROWS=50000`) runs 9 large
+reads and fails if the REST container restarts or was OOM-killed.
 
 Memory limits (`mem_limit`) are set per container and can be changed through
 the `*_MEM_LIMIT` keys in `.env`. Postgres and MinIO grow with data and load;
@@ -291,6 +315,14 @@ give them more on a real server.
 - **Analytics profile** mounts the Docker socket (read-only) into Vector, which
   still gives it broad access to the Docker API. Vector only collects logs of
   this compose project.
+- **Logs carry no credentials.** Signed Storage URLs (`?token=...`) and
+  `?apikey=...` are bearer credentials. The gateway access log records paths
+  without the query string and without the Referer (changed from upstream),
+  the gateway strips the Referer before it reaches Storage (Storage logs
+  request headers), and imgproxy logs at `warn` because its request log
+  contains the presigned MinIO URL. Storage itself redacts `token` in the URLs
+  it logs. The smoke test checks all of this. Keep these settings if you ship
+  logs elsewhere, and do not put tokens into other headers.
 - **Direct Postgres port** accepts the `postgres` role. Keep it on loopback and
   use the pooler or an SSH tunnel for remote access.
 
@@ -339,7 +371,7 @@ scripts/
   smoke.sh                end-to-end test
   backup.sh, restore.sh   pg_dump + MinIO mirror and back
 volumes/
-  api/envoy/              gateway config (from upstream)
+  api/envoy/              gateway config (from upstream; access log sanitized)
   db/                     database init scripts (from upstream)
   functions/              Edge Functions (upstream examples + `ping`)
   logs/vector.yml         log routing for the analytics profile

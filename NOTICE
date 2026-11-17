@@ -9,7 +9,9 @@ Files derived from the Supabase self-hosting setup
 licensed under the Apache License, Version 2.0
 (https://www.apache.org/licenses/LICENSE-2.0):
 
-  - volumes/api/envoy/*            (unmodified)
+  - volumes/api/envoy/*            (lds.template.yaml modified: access log
+                                    without query string and Referer; Referer
+                                    stripped on the Storage route)
   - volumes/db/*.sql               (unmodified)
   - volumes/functions/main, hello, deno.jsonc (unmodified)
   - volumes/pooler/pooler.exs      (unmodified)
