@@ -119,15 +119,16 @@ jobs:
           anon=$(sed -n 's/^ANON_KEY=//p' .env)
           echo "::add-mask::$anon"
           port=$(sed -n 's/^API_HOST_PORT=//p' .env)
-          # Edge Functions: the bundled `hello` function
-          curl -fsS -H "Authorization: Bearer $anon" "http://127.0.0.1:$port/functions/v1/hello" | tee /dev/stderr | grep -q 'Hello'
+          # Edge Functions: the bundled `ping` function
+          curl -fsS -H "Authorization: Bearer $anon" "http://127.0.0.1:$port/functions/v1/ping" | tee /dev/stderr | grep -q '"pong"'
           # Supavisor: transaction-mode connection through the pooler
           tenant=$(sed -n 's/^POOLER_TENANT_ID=//p' .env)
           pport=$(sed -n 's/^POOLER_TRANSACTION_HOST_PORT=//p' .env)
           sed -n 's/^POSTGRES_PASSWORD=//p' .env > "$RUNNER_TEMP/pgpass"
           docker run --rm --network host -v "$RUNNER_TEMP/pgpass:/pgpass:ro" --entrypoint sh \
             supabase/postgres:17.6.1.136 -c "PGPASSWORD=\$(cat /pgpass) psql 'host=127.0.0.1 port=$pport user=postgres.$tenant dbname=postgres' -Atc 'select 1'" \
-            | grep -qx 1 && echo "pooler OK"
+              | grep -qx 1
+          echo "pooler OK"
 
       - name: Memory footprint
         if: always()
